@@ -1,5 +1,9 @@
+import { API_ROUTES } from "@/src/config/api";
+import { useAuth } from "@/src/screens/context/AuthContext";
+import { colors } from "@/src/theme/colors";
 import { Feather, Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { router } from "expo-router";
 import React, { useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -12,12 +16,62 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { colors } from "../../theme/colors";
 
 export default function LoginScreen() {
+  const { setLoggedIn } = useAuth();
   const [phoneOrEmail, setPhoneOrEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const handleLogin = async () => {
+    const login = phoneOrEmail.trim();
+    const userPassword = password.trim();
+
+    if (!login || !userPassword) {
+      setErrorMessage("Please enter your login and password.");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      setErrorMessage("");
+
+      const response = await fetch(API_ROUTES.login, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          login,
+          password: userPassword,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data?.success) {
+        setErrorMessage(data?.message || "Login failed.");
+        return;
+      }
+
+      setLoggedIn(true);
+      router.replace("/home");
+      console.log("Login success:", data);
+
+      /**
+       * Next step later:
+       * - store user data / token
+       * - navigate to home/events screen
+       */
+    } catch (error) {
+      console.log("Login API error:", error);
+      setErrorMessage("Something went wrong. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -52,7 +106,7 @@ export default function LoginScreen() {
                     value={phoneOrEmail}
                     onChangeText={setPhoneOrEmail}
                     placeholder="Enter your registered ID"
-                    placeholderTextColor="#B9B6B1"
+                    placeholderTextColor={colors.muted}
                     style={styles.input}
                     autoCapitalize="none"
                     keyboardType="email-address"
@@ -79,7 +133,7 @@ export default function LoginScreen() {
                     value={password}
                     onChangeText={setPassword}
                     placeholder="••••••••"
-                    placeholderTextColor="#B9B6B1"
+                    placeholderTextColor={colors.muted}
                     secureTextEntry={!showPassword}
                     style={styles.input}
                     autoCapitalize="none"
@@ -98,9 +152,15 @@ export default function LoginScreen() {
                 </View>
               </View>
 
+              {errorMessage ? (
+                <Text style={styles.errorText}>{errorMessage}</Text>
+              ) : null}
+
               <TouchableOpacity
                 activeOpacity={0.9}
                 style={styles.signInButtonOuter}
+                onPress={handleLogin}
+                disabled={isSubmitting}
               >
                 <LinearGradient
                   colors={[colors.primaryStart, colors.primaryEnd]}
@@ -108,7 +168,9 @@ export default function LoginScreen() {
                   end={{ x: 1, y: 0.5 }}
                   style={styles.signInButton}
                 >
-                  <Text style={styles.signInText}>Sign In</Text>
+                  <Text style={styles.signInText}>
+                    {isSubmitting ? "Signing In..." : "Sign In"}
+                  </Text>
                   <Ionicons
                     name="arrow-forward"
                     size={22}
@@ -175,8 +237,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 34,
     paddingBottom: 28,
-    shadowColor: "#000",
-    shadowOpacity: 0.06,
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.32,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 8 },
     elevation: 4,
@@ -193,7 +255,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 14,
-    color: "#5F5D58",
+    color: colors.subtleText,
     fontWeight: "500",
   },
   formGroup: {
@@ -202,7 +264,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 12,
     fontWeight: "800",
-    color: "#6C4A27",
+    color: colors.muted,
     letterSpacing: 1.2,
     marginBottom: 10,
   },
@@ -230,7 +292,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
-    color: "#4B4036",
+    color: colors.text,
     paddingVertical: 14,
   },
   rightIconButton: {
@@ -261,6 +323,14 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "800",
     marginRight: 6,
+  },
+  errorText: {
+    color: colors.danger,
+    fontSize: 14,
+    fontWeight: "600",
+    marginTop: 4,
+    marginBottom: 14,
+    textAlign: "center",
   },
   // dividerRow: {
   //   flexDirection: "row",
@@ -306,7 +376,7 @@ const styles = StyleSheet.create({
   },
   signupText: {
     fontSize: 16,
-    color: "#5F5D58",
+    color: colors.subtleText,
   },
   signupLink: {
     fontSize: 16,

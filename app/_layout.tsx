@@ -1,11 +1,20 @@
+import { AuthProvider } from "@/src/screens/context/AuthContext";
+import { colors } from "@/src/theme/colors";
 import { Stack } from "expo-router";
-import { StatusBar } from "expo-status-bar";
+import React from "react";
 
 export default function RootLayout() {
   return (
-    <>
-      <StatusBar style="dark" />
-      <Stack screenOptions={{ headerShown: false }} />
-    </>
+    <AuthProvider>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          animation: "none",
+          contentStyle: {
+            backgroundColor: colors.background,
+          },
+        }}
+      />
+    </AuthProvider>
   );
 }
