@@ -1,16 +1,17 @@
 import { AppScreen } from "@/src/components/ui/AppScreen";
 import { AnimatedPressable } from "@/src/components/ui/AnimatedPressable";
 import { BrandHeader } from "@/src/components/ui/BrandHeader";
+import { FeatureSlider, FeatureSliderControls } from "@/src/components/ui/FeatureSlider";
 import { Pill } from "@/src/components/ui/Pill";
 import { RevealView } from "@/src/components/ui/RevealView";
 import { SectionTitle } from "@/src/components/ui/SectionTitle";
 import { heroEvents } from "@/src/data/content";
 import { colors } from "@/src/theme/colors";
+import { shadows } from "@/src/theme/shadows";
 import { Ionicons } from "@expo/vector-icons";
-import { Image } from "expo-image";
 import { router } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
-import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
+import React from "react";
+import { StyleSheet, Text, View } from "react-native";
 
 const navCards = [
   {
@@ -32,35 +33,6 @@ const navCards = [
 ];
 
 export default function HomeScreen() {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const cardOpacity = useRef(new Animated.Value(1)).current;
-  const event = heroEvents[currentIndex];
-
-  const goNext = () => {
-    setCurrentIndex((prev) => (prev + 1) % heroEvents.length);
-  };
-
-  const goPrev = () => {
-    setCurrentIndex((prev) => (prev - 1 + heroEvents.length) % heroEvents.length);
-  };
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % heroEvents.length);
-    }, 4500);
-
-    return () => clearInterval(timer);
-  }, []);
-
-  useEffect(() => {
-    cardOpacity.setValue(0.2);
-    Animated.timing(cardOpacity, {
-      toValue: 1,
-      duration: 320,
-      useNativeDriver: true,
-    }).start();
-  }, [cardOpacity, currentIndex]);
-
   return (
     <AppScreen>
       <RevealView>
@@ -68,15 +40,20 @@ export default function HomeScreen() {
       </RevealView>
 
       <RevealView delay={70} style={styles.sectionSpacing}>
-        <View style={styles.rowBetween}>
-          <SectionTitle label="Featured Events" subtitle="Community Hub" />
-          <View style={styles.arrowRow}>
-            <ArrowButton icon="chevron-back" onPress={goPrev} />
-            <ArrowButton icon="chevron-forward" onPress={goNext} />
-          </View>
-        </View>
-
-        <AnimatedPressable
+        <FeatureSlider
+          items={heroEvents}
+          itemKey={(item) => item.id}
+          imageUri={(item) => item.image}
+          cardHeight={360}
+          imageOpacity={0.72}
+          contentStyle={styles.heroContent}
+          renderControls={({ goNext, goPrev }) => (
+            <View style={styles.rowBetween}>
+              <SectionTitle label="Featured Events" subtitle="Community Hub" />
+              <FeatureSliderControls goPrev={goPrev} goNext={goNext} />
+            </View>
+          )}
+          showControls={false}
           onPress={() =>
             router.push({
               pathname: "/events/[id]",
@@ -84,20 +61,8 @@ export default function HomeScreen() {
             })
           }
           style={styles.heroCard}
-        >
-          <Animated.View
-            style={[
-              styles.heroAnimatedLayer,
-              { opacity: cardOpacity },
-            ]}
-          >
-            <Image
-              source={{ uri: event.image }}
-              style={styles.heroImage}
-              contentFit="cover"
-            />
-            <View style={styles.heroOverlay} />
-            <View style={styles.heroContent}>
+          renderContent={(event) => (
+            <>
               <View style={styles.heroTags}>
                 {event.tags.map((tag) => (
                   <View key={tag} style={styles.heroTagItem}>
@@ -110,20 +75,9 @@ export default function HomeScreen() {
                 <Text style={styles.heroButtonText}>Detail</Text>
                 <Ionicons name="arrow-forward" size={16} color={colors.white} />
               </View>
-            </View>
-          </Animated.View>
-          <View style={styles.indicatorRow}>
-            {heroEvents.map((item, index) => (
-              <View
-                key={item.id}
-                style={[
-                  styles.indicator,
-                  index === currentIndex ? styles.indicatorActive : null,
-                ]}
-              />
-            ))}
-          </View>
-        </AnimatedPressable>
+            </>
+          )}
+        />
       </RevealView>
 
       <RevealView delay={130} style={[styles.sectionSpacing, styles.fullBleedSection]}>
@@ -152,27 +106,40 @@ export default function HomeScreen() {
               <Text style={styles.featureTileEyebrow}>{card.eyebrow}</Text>
               <Text style={styles.featureTileTitle}>{card.title}</Text>
               <Text style={styles.featureTileSubtitle}>{card.subtitle}</Text>
-              <View style={styles.featureTileArrow}>
-                <Ionicons name="arrow-forward" size={18} color={card.accent} />
+              <View style={styles.featureTileFooter}>
+                <View style={styles.featureTileActionCopy}>
+                  <View
+                    style={[
+                      styles.featureTileActionLine,
+                      { backgroundColor: `${card.accent}88` },
+                    ]}
+                  />
+                  <Text style={[styles.featureTileActionText, { color: card.accent }]}>
+                    Enter Section
+                  </Text>
+                </View>
+                <View
+                  style={[
+                    styles.featureTileArrow,
+                    {
+                      backgroundColor: `${card.accent}14`,
+                      borderColor: `${card.accent}38`,
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name="arrow-up"
+                    size={18}
+                    color={card.accent}
+                    style={styles.featureTileArrowIcon}
+                  />
+                </View>
               </View>
             </AnimatedPressable>
           ))}
         </View>
       </RevealView>
     </AppScreen>
-  );
-}
-
-type ArrowButtonProps = {
-  icon: "chevron-back" | "chevron-forward";
-  onPress: () => void;
-};
-
-function ArrowButton({ icon, onPress }: ArrowButtonProps) {
-  return (
-    <Pressable onPress={onPress} style={styles.arrowButton}>
-      <Ionicons name={icon} size={18} color={colors.title} />
-    </Pressable>
   );
 }
 
@@ -189,45 +156,10 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
     justifyContent: "space-between",
   },
-  arrowRow: {
-    flexDirection: "row",
-    marginBottom: 18,
-  },
-  arrowButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.softPeach,
-    alignItems: "center",
-    justifyContent: "center",
-    marginLeft: 8,
-  },
   heroCard: {
-    position: "relative",
-    borderRadius: 32,
-    overflow: "hidden",
-    backgroundColor: colors.card,
     minHeight: 360,
-    shadowColor: "#000",
-    shadowOpacity: 0.28,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 16 },
-    elevation: 10,
-  },
-  heroAnimatedLayer: {
-    minHeight: 360,
-  },
-  heroImage: {
-    width: "100%",
-    height: 360,
-    opacity: 0.72,
-  },
-  heroOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: colors.overlay,
   },
   heroContent: {
-    position: "absolute",
     left: 22,
     right: 22,
     bottom: 24,
@@ -264,23 +196,6 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     marginRight: 8,
   },
-  indicatorRow: {
-    position: "absolute",
-    right: 22,
-    bottom: 18,
-    flexDirection: "row",
-  },
-  indicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.45)",
-    marginLeft: 6,
-  },
-  indicatorActive: {
-    width: 24,
-    backgroundColor: colors.white,
-  },
   featureTile: {
     width: "100%",
     minHeight: 220,
@@ -291,6 +206,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     marginBottom: 16,
     overflow: "hidden",
+    ...shadows.lifted,
   },
   featureTileGlow: {
     position: "absolute",
@@ -329,13 +245,38 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     maxWidth: "84%",
   },
+  featureTileFooter: {
+    marginTop: 22,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  featureTileActionCopy: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  featureTileActionLine: {
+    width: 18,
+    height: 2,
+    borderRadius: 999,
+    marginRight: 10,
+  },
+  featureTileActionText: {
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 1.1,
+    textTransform: "uppercase",
+  },
   featureTileArrow: {
-    marginTop: "auto",
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: colors.card,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
+    ...shadows.soft,
+  },
+  featureTileArrowIcon: {
+    transform: [{ rotate: "45deg" }],
   },
 });

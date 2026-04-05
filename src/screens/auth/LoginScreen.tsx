@@ -1,10 +1,12 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_ROUTES } from "@/src/config/api";
 import { useAuth } from "@/src/screens/context/AuthContext";
 import { colors } from "@/src/theme/colors";
+import { shadows } from "@/src/theme/shadows";
 import { Feather, Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -17,13 +19,48 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+const REMEMBER_LOGIN_KEY = "samaj-app:remember-login";
+const SAVED_LOGIN_KEY = "samaj-app:saved-login";
+const SAVED_PASSWORD_KEY = "samaj-app:saved-password";
+
 export default function LoginScreen() {
   const { setLoggedIn } = useAuth();
   const [phoneOrEmail, setPhoneOrEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadSavedCredentials = async () => {
+      try {
+        const [rememberValue, savedLogin, savedPassword] = await Promise.all([
+          AsyncStorage.getItem(REMEMBER_LOGIN_KEY),
+          AsyncStorage.getItem(SAVED_LOGIN_KEY),
+          AsyncStorage.getItem(SAVED_PASSWORD_KEY),
+        ]);
+
+        if (!isMounted || rememberValue !== "true") {
+          return;
+        }
+
+        setRememberMe(true);
+        setPhoneOrEmail(savedLogin ?? "");
+        setPassword(savedPassword ?? "");
+      } catch {
+        // Ignore storage read failures and keep login usable.
+      }
+    };
+
+    loadSavedCredentials();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleLogin = async () => {
     const login = phoneOrEmail.trim();
@@ -56,8 +93,21 @@ export default function LoginScreen() {
         return;
       }
 
+      if (rememberMe) {
+        await Promise.all([
+          AsyncStorage.setItem(REMEMBER_LOGIN_KEY, "true"),
+          AsyncStorage.setItem(SAVED_LOGIN_KEY, login),
+          AsyncStorage.setItem(SAVED_PASSWORD_KEY, userPassword),
+        ]);
+      } else {
+        await Promise.all([
+          AsyncStorage.removeItem(REMEMBER_LOGIN_KEY),
+          AsyncStorage.removeItem(SAVED_LOGIN_KEY),
+          AsyncStorage.removeItem(SAVED_PASSWORD_KEY),
+        ]);
+      }
+
       setLoggedIn(true);
-      router.replace("/home");
       console.log("Login success:", data);
 
       /**
@@ -152,6 +202,21 @@ export default function LoginScreen() {
                 </View>
               </View>
 
+              <View style={styles.rememberRow}>
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  style={styles.rememberToggle}
+                  onPress={() => setRememberMe((prev) => !prev)}
+                >
+                  <View style={[styles.checkbox, rememberMe ? styles.checkboxChecked : null]}>
+                    {rememberMe ? (
+                      <Ionicons name="checkmark" size={14} color={colors.white} />
+                    ) : null}
+                  </View>
+                  <Text style={styles.rememberText}>Remember Me</Text>
+                </TouchableOpacity>
+              </View>
+
               {errorMessage ? (
                 <Text style={styles.errorText}>{errorMessage}</Text>
               ) : null}
@@ -177,6 +242,14 @@ export default function LoginScreen() {
                     color={colors.white}
                   />
                 </LinearGradient>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                activeOpacity={0.85}
+                style={styles.testLinkButton}
+                onPress={() => router.push("/members")}
+              >
+                <Text style={styles.testLinkText}>Open Members Page for Testing</Text>
               </TouchableOpacity>
 
               {/* <View style={styles.dividerRow}>
@@ -237,11 +310,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 34,
     paddingBottom: 28,
-    shadowColor: colors.shadow,
-    shadowOpacity: 0.32,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 4,
+    ...shadows.lifted,
   },
   headerBlock: {
     alignItems: "center",
@@ -299,16 +368,56 @@ const styles = StyleSheet.create({
     paddingLeft: 8,
     paddingVertical: 4,
   },
+  rememberRow: {
+    marginTop: -2,
+    marginBottom: 18,
+  },
+  rememberToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 7,
+    borderWidth: 1,
+    borderColor: colors.softPeachBorder,
+    backgroundColor: colors.inputBg,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+  },
+  checkboxChecked: {
+    backgroundColor: colors.primarySolid,
+    borderColor: colors.primarySolid,
+  },
+  rememberText: {
+    color: colors.subtleText,
+    fontSize: 14,
+    fontWeight: "600",
+  },
   signInButtonOuter: {
     marginTop: 6,
-    marginBottom: 26,
+    marginBottom: 14,
     borderRadius: 16,
     overflow: "hidden",
-    shadowColor: "#C45A12",
-    shadowOpacity: 0.28,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 5,
+    ...shadows.soft,
+  },
+  testLinkButton: {
+    minHeight: 48,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.inputBg,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 26,
+  },
+  testLinkText: {
+    color: colors.subtleText,
+    fontSize: 14,
+    fontWeight: "700",
   },
   signInButton: {
     minHeight: 64,

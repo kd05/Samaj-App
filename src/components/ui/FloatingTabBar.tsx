@@ -1,4 +1,5 @@
 import { colors } from "@/src/theme/colors";
+import { shadows } from "@/src/theme/shadows";
 import { Ionicons } from "@expo/vector-icons";
 import { router, usePathname } from "expo-router";
 import React from "react";
@@ -26,8 +27,7 @@ export function FloatingTabBar() {
 
   return (
     <View
-      pointerEvents="box-none"
-      style={[styles.outer, { bottom: Math.max(insets.bottom, 10) + 8 }]}
+      style={[styles.outer, { bottom: Math.max(insets.bottom, 10) + 8, pointerEvents: "box-none" }]}
     >
       <View style={styles.bar}>
         {tabs.map((tab) => {
@@ -75,10 +75,7 @@ const styles = StyleSheet.create({
     borderColor: colors.tabBarBorder,
     paddingHorizontal: 8,
     paddingVertical: 7,
-    shadowColor: "#000",
-    shadowOpacity: 0.28,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 10 },
+    ...shadows.soft,
   },
   itemWrap: {
     flex: 1,

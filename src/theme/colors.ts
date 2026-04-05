@@ -22,6 +22,7 @@ export const colors = {
   primaryEnd: "#F29A4A",
   primarySolid: "#E37A36",
   primaryDeep: "#B8561E",
+  shadowWarm: "#A84F1E",
   success: "#3E7C4E",
   danger: "#B42318",
   white: "#FFFFFF",
