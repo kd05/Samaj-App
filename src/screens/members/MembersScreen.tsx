@@ -5,18 +5,28 @@ import { PrimaryButton } from "@/src/components/ui/PrimaryButton";
 import { RevealView } from "@/src/components/ui/RevealView";
 import { SearchInput } from "@/src/components/ui/SearchInput";
 import { SectionTitle } from "@/src/components/ui/SectionTitle";
-import { members, villages } from "@/src/data/content";
+import { API_ROUTES } from "@/src/config/api";
+import { villages as fallbackVillages } from "@/src/data/content";
 import { colors } from "@/src/theme/colors";
 import { shadows } from "@/src/theme/shadows";
+import { getNumberField, getObjectField, getStringField, type ApiRecord } from "@/src/utils/apiFields";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 
 export default function MembersScreen() {
   const params = useLocalSearchParams<{ query?: string }>();
   const [name, setName] = useState("");
   const [selectedVillage, setSelectedVillage] = useState("");
+  const [appliedName, setAppliedName] = useState("");
+  const [appliedVillage, setAppliedVillage] = useState("");
+  const [memberList, setMemberList] = useState<MemberListItem[]>([]);
+  const [availableVillages, setAvailableVillages] = useState<string[]>(fallbackVillages);
+  const [hasSearched, setHasSearched] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const [membersError, setMembersError] = useState("");
+  const [villagesError, setVillagesError] = useState("");
   const [showVillages, setShowVillages] = useState(false);
 
   useEffect(() => {
@@ -25,18 +35,139 @@ export default function MembersScreen() {
     }
   }, [params.query]);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadVillages = async () => {
+      try {
+        setVillagesError("");
+
+        const response = await fetch(API_ROUTES.villages, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        const data = await response.json();
+        const villagesPayload = Array.isArray(data?.data?.villages)
+          ? data.data.villages
+          : Array.isArray(data?.villages)
+            ? data.villages
+            : [];
+
+        const villageOptions = villagesPayload
+          .map((item) => getStringField(item as ApiRecord, ["title", "name"]))
+          .filter(Boolean);
+
+        if (!response.ok || villageOptions.length === 0) {
+          throw new Error(data?.message || "Unable to fetch villages.");
+        }
+
+        if (!isMounted) {
+          return;
+        }
+
+        setAvailableVillages(villageOptions);
+      } catch (error) {
+        console.log("Villages API error:", error);
+
+        if (!isMounted) {
+          return;
+        }
+
+        setAvailableVillages(fallbackVillages);
+        setVillagesError("Showing saved villages right now.");
+      }
+    };
+
+    loadVillages();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const filteredMembers = useMemo(() => {
-    return members.filter((member) => {
-      const nameMatch = name
-        ? member.fullName.toLowerCase().includes(name.trim().toLowerCase())
+    return memberList.filter((member) => {
+      const nameMatch = appliedName
+        ? member.fullName.toLowerCase().includes(appliedName.trim().toLowerCase())
         : true;
-      const villageMatch = selectedVillage
-        ? member.village === selectedVillage
+      const villageMatch = appliedVillage
+        ? member.village.toLowerCase() === appliedVillage.trim().toLowerCase()
         : true;
 
       return nameMatch && villageMatch;
     });
-  }, [name, selectedVillage]);
+  }, [appliedName, appliedVillage, memberList]);
+
+  const isSearchDisabled = isSearching || (!name.trim() && !selectedVillage);
+
+  const handleSearch = async () => {
+    if (isSearchDisabled) {
+      return;
+    }
+
+    try {
+      setIsSearching(true);
+      setMembersError("");
+      setHasSearched(true);
+      setAppliedName(name.trim());
+      setAppliedVillage(selectedVillage);
+      setShowVillages(false);
+
+      const response = await fetch(API_ROUTES.members, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      const data = await response.json();
+      const membersPayload = Array.isArray(data?.data?.members)
+        ? data.data.members
+        : Array.isArray(data?.members)
+          ? data.members
+          : [];
+
+      const mappedMembers = membersPayload
+        .map((item) => mapApiMember(item))
+        .filter((member): member is MemberListItem => member !== null);
+
+      if (!response.ok) {
+        throw new Error(data?.message || "Unable to fetch members.");
+      }
+
+      setMemberList(mappedMembers);
+    } catch (error) {
+      console.log("Members API error:", error);
+      setMemberList([]);
+      setMembersError("We couldn't load members right now. Please try again shortly.");
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const resetResults = () => {
+    setAppliedName("");
+    setAppliedVillage("");
+    setMemberList([]);
+    setMembersError("");
+    setHasSearched(false);
+    setIsSearching(false);
+    setShowVillages(false);
+  };
+
+  const handleClearName = () => {
+    setName("");
+    resetResults();
+  };
+
+  const handleClearVillage = () => {
+    setSelectedVillage("");
+    setShowVillages(false);
+    resetResults();
+  };
 
   return (
     <AppScreen keyboardShouldPersistTaps="handled">
@@ -45,16 +176,24 @@ export default function MembersScreen() {
       </RevealView>
 
       <RevealView delay={70} style={styles.searchCard}>
-        <SectionTitle label="Find Your Kin" />
+        <SectionTitle label="Search Members in Canada" />
         <Text style={styles.searchSubtitle}>
-          Search by member name or village. The structure is static today, but ready for API-backed data later.
+          Search by member name or village. Results update only after you press the search
+          button.
         </Text>
+        {membersError ? (
+          <Text style={styles.helperText}>{membersError}</Text>
+        ) : null}
+        {villagesError ? (
+          <Text style={styles.helperText}>{villagesError}</Text>
+        ) : null}
 
         <View style={styles.formGap}>
           <SearchInput
             value={name}
             onChangeText={setName}
             placeholder="e.g. Rajesh Patel"
+            onClear={handleClearName}
           />
         </View>
 
@@ -71,16 +210,23 @@ export default function MembersScreen() {
                 {selectedVillage || "Select Village"}
               </Text>
             </View>
-            <Ionicons
-              name={showVillages ? "chevron-up" : "chevron-down"}
-              size={18}
-              color={colors.muted}
-            />
+            <View style={styles.dropdownActions}>
+              {selectedVillage ? (
+                <Pressable onPress={handleClearVillage} hitSlop={10} style={styles.dropdownClearButton}>
+                  <Ionicons name="close-circle" size={18} color={colors.muted} />
+                </Pressable>
+              ) : null}
+              <Ionicons
+                name={showVillages ? "chevron-up" : "chevron-down"}
+                size={18}
+                color={colors.muted}
+              />
+            </View>
           </Pressable>
 
           {showVillages ? (
             <View style={styles.dropdownList}>
-              {villages.map((village) => (
+              {availableVillages.map((village) => (
                 <Pressable
                   key={village}
                   onPress={() => {
@@ -96,59 +242,154 @@ export default function MembersScreen() {
           ) : null}
         </View>
 
-        <PrimaryButton
-          label="Clear Filters"
-          onPress={() => {
-            setName("");
-            setSelectedVillage("");
-            setShowVillages(false);
-          }}
-        />
+        <View style={styles.actionsRow}>
+          <PrimaryButton
+            label={isSearching ? "Searching..." : "Search"}
+            onPress={handleSearch}
+            disabled={isSearchDisabled}
+            style={styles.searchButtonFull}
+          />
+        </View>
       </RevealView>
 
-      <Text style={styles.resultsCount}>
-        {filteredMembers.length} member{filteredMembers.length === 1 ? "" : "s"} found
-      </Text>
-
-      {filteredMembers.length === 0 ? (
+      {!hasSearched ? (
         <View style={styles.emptyState}>
           <View style={styles.emptyIcon}>
             <Ionicons name="people-outline" size={26} color={colors.muted} />
           </View>
-          <Text style={styles.emptyTitle}>No members found</Text>
-          <Text style={styles.emptySubtitle}>Try adjusting your search filters.</Text>
+          <Text style={styles.emptyTitle}>Search for members</Text>
+          <Text style={styles.emptySubtitle}>
+            Enter a name or choose a village, then press search to view results.
+          </Text>
         </View>
-      ) : null}
+      ) : isSearching ? (
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator size="large" color={colors.primaryEnd} />
+          <Text style={styles.loadingTitle}>Searching members</Text>
+          <Text style={styles.loadingSubtitle}>
+            We are fetching the latest results for your search.
+          </Text>
+        </View>
+      ) : (
+        <>
+          <Text style={styles.resultsCount}>
+            {filteredMembers.length} member{filteredMembers.length === 1 ? "" : "s"} found
+          </Text>
 
-      {filteredMembers.map((member) => (
-        <AnimatedPressable key={member.id} style={styles.memberCard}>
-          <View style={styles.memberTopRow}>
-            <View style={styles.memberMain}>
-              <Text style={styles.memberName}>{member.fullName}</Text>
-              <Text style={styles.memberAge}>Age: {getAge(member.dateOfBirth)}</Text>
-            </View>
-          </View>
-
-          <InfoLine icon="calendar-outline" text={member.dateOfBirth} />
-          <InfoLine icon="location-outline" text={`${member.currentCity} · ${member.village}`} />
-          <InfoLine icon="briefcase-outline" text={member.occupation} />
-
-          {member.canadaStatus ? (
-            <View style={styles.statusRow}>
-              <Ionicons
-                name="shield-checkmark-outline"
-                size={14}
-                color={colors.primarySolid}
-              />
-              <View style={styles.statusBadge}>
-                <Text style={styles.statusText}>{member.canadaStatus}</Text>
+          {filteredMembers.length === 0 ? (
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIcon}>
+                <Ionicons name="people-outline" size={26} color={colors.muted} />
               </View>
+              <Text style={styles.emptyTitle}>No members found</Text>
+              <Text style={styles.emptySubtitle}>Try adjusting your search filters.</Text>
             </View>
           ) : null}
-        </AnimatedPressable>
-      ))}
+
+          {filteredMembers.map((member) => (
+            <AnimatedPressable key={member.id} style={styles.memberCard}>
+              <View style={styles.memberTopRow}>
+                <View style={styles.memberMain}>
+                  <Text style={styles.memberName}>
+                    {member.fullName}
+                    {member.village ? (
+                      <Text style={styles.memberMetaInline}> ({member.village})</Text>
+                    ) : null}
+                  </Text>
+                  <Text style={styles.memberAge}>Age: {member.age}</Text>
+                </View>
+              </View>
+
+              <InfoLine icon="calendar-outline" text={member.dateOfBirth} />
+              <InfoLine icon="person-outline" text={member.gender} />
+              <InfoLine icon="location-outline" text={member.locationLabel} />
+              <InfoLine icon="briefcase-outline" text={member.occupation} />
+
+              {member.canadaStatus ? (
+                <View style={styles.statusRow}>
+                  <Ionicons
+                    name="shield-checkmark-outline"
+                    size={14}
+                    color={colors.primarySolid}
+                  />
+                  <View style={styles.statusBadge}>
+                    <Text style={styles.statusText}>{member.canadaStatus}</Text>
+                  </View>
+                </View>
+              ) : null}
+            </AnimatedPressable>
+          ))}
+        </>
+      )}
     </AppScreen>
   );
+}
+
+type ApiMember = ApiRecord;
+type MemberListItem = {
+  id: string;
+  fullName: string;
+  age: string;
+  dateOfBirth: string;
+  currentCity: string;
+  gender: string;
+  province: string;
+  locationLabel: string;
+  village: string;
+  occupation: string;
+  canadaStatus?: string;
+};
+
+function mapApiMember(item: ApiMember): MemberListItem | null {
+  const acf = getObjectField(item, "acf");
+  const id = getStringField(item, ["id", "ID", "member_id"]);
+  const firstName = getStringField(item, ["first_name", "firstName", "fname"]);
+  const lastName = getStringField(item, ["last_name", "lastName", "lname"]);
+  const fullName =
+    getStringField(item, ["full_name", "fullName", "name", "title"]) ||
+    [firstName, lastName].filter(Boolean).join(" ").trim();
+  const village =
+    getStringField(acf, ["village"]) ||
+    getStringField(item, ["village", "village_name", "villageName"]);
+  const city =
+    getStringField(acf, ["city"]) ||
+    getStringField(item, ["current_city", "currentCity", "city", "location"]) ||
+    "N/A";
+  const province = getStringField(acf, ["province"]) || getStringField(item, ["province"]) || "N/A";
+  const gender = getStringField(acf, ["gender"]) || getStringField(item, ["gender"]) || "N/A";
+  const age = getNumberField(item, ["age"]);
+
+  if (!id || !fullName || !village) {
+    return null;
+  }
+
+  return {
+    id,
+    fullName,
+    age,
+    dateOfBirth:
+      getStringField(acf, ["date_of_birth"]) ||
+      getStringField(item, ["date_of_birth", "dateOfBirth", "dob", "birth_date"]) ||
+      "N/A",
+    currentCity: city,
+    gender,
+    province,
+    locationLabel: `${city}, ${province}`,
+    village,
+    occupation:
+      getStringField(acf, ["designation"]) ||
+      getStringField(item, ["occupation", "profession", "job_title", "jobTitle"]) ||
+      "N/A",
+    canadaStatus:
+      getStringField(acf, ["current_status_in_canada"]) ||
+      getStringField(item, [
+        "canada_status",
+        "canadaStatus",
+        "status_in_canada",
+        "statusInCanada",
+      ]) ||
+      undefined,
+  };
 }
 
 type InfoLineProps = {
@@ -165,18 +406,6 @@ function InfoLine({ icon, text }: InfoLineProps) {
   );
 }
 
-function getAge(dateOfBirth: string) {
-  const birthDate = new Date(dateOfBirth);
-  const today = new Date();
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const monthDiff = today.getMonth() - birthDate.getMonth();
-
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-    age -= 1;
-  }
-
-  return age;
-}
 
 const styles = StyleSheet.create({
   searchCard: {
@@ -193,13 +422,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 21,
     marginTop: -4,
-    marginBottom: 18,
+    marginBottom: 10,
+  },
+  helperText: {
+    color: colors.muted,
+    fontSize: 12,
+    marginBottom: 14,
   },
   formGap: {
     marginBottom: 14,
   },
   dropdownWrap: {
     marginBottom: 16,
+  },
+  actionsRow: {
+    width: "100%",
+  },
+  searchButtonFull: {
+    width: "100%",
   },
   dropdownButton: {
     minHeight: 54,
@@ -217,6 +457,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flex: 1,
     marginRight: 12,
+  },
+  dropdownActions: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  dropdownClearButton: {
+    marginRight: 10,
   },
   dropdownText: {
     marginLeft: 10,
@@ -272,10 +519,31 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "800",
   },
+  loadingWrap: {
+    alignItems: "center",
+    paddingHorizontal: 24,
+    paddingVertical: 28,
+    marginBottom: 18,
+  },
+  loadingTitle: {
+    color: colors.title,
+    fontSize: 20,
+    fontWeight: "800",
+    marginTop: 16,
+  },
+  loadingSubtitle: {
+    color: colors.subtleText,
+    fontSize: 14,
+    lineHeight: 21,
+    textAlign: "center",
+    marginTop: 6,
+    maxWidth: 240,
+  },
   emptySubtitle: {
     color: colors.subtleText,
     fontSize: 14,
     marginTop: 4,
+    textAlign: "center",
   },
   memberCard: {
     backgroundColor: colors.card,
@@ -283,7 +551,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: 28,
     padding: 18,
-    marginBottom: 14,
+    marginBottom: 18,
     ...shadows.soft,
   },
   memberTopRow: {
@@ -298,6 +566,11 @@ const styles = StyleSheet.create({
     color: colors.title,
     fontSize: 20,
     fontWeight: "800",
+  },
+  memberMetaInline: {
+    color: colors.subtleText,
+    fontSize: 14,
+    fontWeight: "600",
   },
   memberAge: {
     color: colors.subtleText,

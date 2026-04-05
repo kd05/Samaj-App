@@ -8,4 +8,6 @@ export const API_BASE_URL = __DEV__ ? LOCAL_API_BASE : LIVE_API_BASE;
 
 export const API_ROUTES = {
   login: `${API_BASE_URL}/login`,
+  members: `${API_BASE_URL}/members`,
+  villages: `${API_BASE_URL}/villages`,
 };

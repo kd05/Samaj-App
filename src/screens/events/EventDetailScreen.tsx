@@ -12,7 +12,6 @@ import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
-  LayoutAnimation,
   Modal,
   Pressable,
   ScrollView,
@@ -83,9 +82,9 @@ export default function EventDetailScreen() {
           <LinearGradient
             colors={[
               "rgba(23,18,15,0)",
-              "rgba(23,18,15,0.08)",
-              "rgba(23,18,15,0.36)",
-              "rgba(23,18,15,0.72)",
+              "rgba(23,18,15,0.18)",
+              "rgba(23,18,15,0.5)",
+              "rgba(23,18,15,0.84)",
               colors.background,
             ]}
             start={{ x: 0.5, y: 0 }}
@@ -94,11 +93,11 @@ export default function EventDetailScreen() {
           />
 
           <View style={styles.heroHeader}>
-            <Pressable onPress={() => router.back()} style={styles.iconButton}>
-              <Ionicons name="arrow-back" size={20} color={colors.white} />
-            </Pressable>
-            <Pressable style={styles.iconButton}>
-              <Ionicons name="share-social-outline" size={18} color={colors.white} />
+            <Pressable onPress={() => router.back()} style={styles.backButton}>
+              <View style={styles.backButtonIconWrap}>
+                <Ionicons name="chevron-back" size={16} color={colors.white} />
+              </View>
+              <Text style={styles.backButtonText}>Back</Text>
             </Pressable>
           </View>
 
@@ -146,7 +145,6 @@ export default function EventDetailScreen() {
                   highlight={highlight}
                   isOpen={isOpen}
                   onPress={() => {
-                    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
                     setOpenHighlight(isOpen ? "" : highlight.id);
                   }}
                 />
@@ -254,7 +252,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    top: "46%",
+    top: "38%",
   },
   heroHeader: {
     position: "absolute",
@@ -262,16 +260,40 @@ const styles = StyleSheet.create({
     left: 20,
     right: 20,
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "flex-start",
     zIndex: 4,
+  },
+  backButton: {
+    minHeight: 42,
+    paddingLeft: 6,
+    paddingRight: 14,
+    borderRadius: 21,
+    backgroundColor: "rgba(16,12,10,0.42)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.09)",
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  backButtonIconWrap: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "rgba(242,154,74,0.18)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 8,
+  },
+  backButtonText: {
+    color: colors.white,
+    fontSize: 13,
+    fontWeight: "800",
+    letterSpacing: 0.3,
   },
   iconButton: {
     width: 42,
     height: 42,
     borderRadius: 21,
     backgroundColor: "rgba(8,8,8,0.34)",
-    alignItems: "center",
-    justifyContent: "center",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.08)",
   },
@@ -406,13 +428,16 @@ const styles = StyleSheet.create({
     color: colors.subtleText,
     fontSize: 14,
     lineHeight: 22,
-    marginTop: 14,
+    paddingTop: 14,
   },
   accordionBody: {
     overflow: "hidden",
   },
-  accordionBodyMeasure: {
-    paddingBottom: 2,
+  accordionBodyInner: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
   },
   footerCta: {
     position: "absolute",
@@ -511,6 +536,25 @@ type AccordionItemProps = {
 };
 
 function AccordionItem({ highlight, isOpen, onPress }: AccordionItemProps) {
+  const [measuredHeight, setMeasuredHeight] = useState(0);
+  const heightAnim = useRef(new Animated.Value(0)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(heightAnim, {
+        toValue: isOpen ? measuredHeight : 0,
+        duration: 260,
+        useNativeDriver: false,
+      }),
+      Animated.timing(opacityAnim, {
+        toValue: isOpen ? 1 : 0,
+        duration: 220,
+        useNativeDriver: false,
+      }),
+    ]).start();
+  }, [heightAnim, isOpen, measuredHeight, opacityAnim]);
+
   return (
     <AnimatedPressable
       onPress={onPress}
@@ -539,11 +583,20 @@ function AccordionItem({ highlight, isOpen, onPress }: AccordionItemProps) {
         />
       </View>
 
-      {isOpen ? (
-        <Animated.View style={styles.accordionBody}>
+      <Animated.View style={[styles.accordionBody, { height: heightAnim, opacity: opacityAnim }]}>
+        <View
+          style={styles.accordionBodyInner}
+          onLayout={(event) => {
+            const nextHeight = event.nativeEvent.layout.height;
+
+            if (nextHeight !== measuredHeight) {
+              setMeasuredHeight(nextHeight);
+            }
+          }}
+        >
           <Text style={styles.accordionContent}>{highlight.content}</Text>
-        </Animated.View>
-      ) : null}
+        </View>
+      </Animated.View>
     </AnimatedPressable>
   );
 }

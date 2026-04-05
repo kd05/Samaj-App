@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    marginBottom: 16,
+    marginBottom: 20,
     borderRadius: 30,
     overflow: "hidden",
     ...shadows.lifted,

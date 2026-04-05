@@ -219,63 +219,6 @@ export const villages = [
   "Wadhwan",
 ];
 
-export const members: Member[] = [
-  {
-    id: "1",
-    fullName: "Rajesh Patel",
-    dateOfBirth: "1978-03-15",
-    currentCity: "Ahmedabad",
-    village: "Rajkot",
-    occupation: "Civil Engineer",
-    canadaStatus: "Permanent Resident",
-  },
-  {
-    id: "2",
-    fullName: "Kiran Desai",
-    dateOfBirth: "1985-07-22",
-    currentCity: "Surat",
-    village: "Amreli",
-    occupation: "Business Owner",
-    canadaStatus: "Citizen",
-  },
-  {
-    id: "3",
-    fullName: "Manish Vasani",
-    dateOfBirth: "1990-11-08",
-    currentCity: "Mumbai",
-    village: "Jamnagar",
-    occupation: "Software Developer",
-    canadaStatus: "Student",
-  },
-  {
-    id: "4",
-    fullName: "Hemlata Patel",
-    dateOfBirth: "1972-05-30",
-    currentCity: "Vadodara",
-    village: "Bhavnagar",
-    occupation: "School Principal",
-    canadaStatus: "Citizen",
-  },
-  {
-    id: "5",
-    fullName: "Suresh Kothari",
-    dateOfBirth: "1968-01-12",
-    currentCity: "Rajkot",
-    village: "Gondal",
-    occupation: "Chartered Accountant",
-    canadaStatus: "Permanent Resident",
-  },
-  {
-    id: "6",
-    fullName: "Priya Mehta",
-    dateOfBirth: "1994-09-04",
-    currentCity: "Pune",
-    village: "Kutch",
-    occupation: "Medical Doctor",
-    canadaStatus: "Student",
-  },
-];
-
 export function getEventDetailById(id?: string) {
   return eventDetails.find((item) => item.id === id) ?? eventDetails[0];
 }

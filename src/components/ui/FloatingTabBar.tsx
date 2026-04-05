@@ -2,8 +2,8 @@ import { colors } from "@/src/theme/colors";
 import { shadows } from "@/src/theme/shadows";
 import { Ionicons } from "@expo/vector-icons";
 import { router, usePathname } from "expo-router";
-import React from "react";
-import { StyleSheet, View } from "react-native";
+import React, { useEffect, useRef } from "react";
+import { Animated, Easing, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AnimatedPressable } from "./AnimatedPressable";
 
@@ -34,24 +34,83 @@ export function FloatingTabBar() {
           const isActive = pathname === tab.path;
 
           return (
-            <AnimatedPressable
-              key={tab.path}
-              onPress={() => router.replace(tab.path as never)}
-              style={styles.itemWrap}
-            >
-              <View style={[styles.item, isActive ? styles.itemActive : null]}>
-                {isActive ? <View style={styles.activeGlow} /> : null}
-                <Ionicons
-                  name={isActive ? tab.activeIcon : tab.icon}
-                  size={25}
-                  color={isActive ? colors.primaryEnd : colors.subtleText}
-                />
-              </View>
-            </AnimatedPressable>
+            <TabBarItem key={tab.path} tab={tab} isActive={isActive} />
           );
         })}
       </View>
     </View>
+  );
+}
+
+function TabBarItem({
+  tab,
+  isActive,
+}: {
+  tab: (typeof tabs)[number];
+  isActive: boolean;
+}) {
+  const spin = useRef(new Animated.Value(0)).current;
+  const tilt = useRef(new Animated.Value(0)).current;
+  const wasActive = useRef(isActive);
+
+  useEffect(() => {
+    if (isActive && !wasActive.current) {
+      spin.setValue(0);
+      tilt.setValue(0);
+
+      Animated.parallel([
+        Animated.timing(spin, {
+          toValue: 1,
+          duration: 420,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.sequence([
+          Animated.timing(tilt, {
+            toValue: 1,
+            duration: 140,
+            easing: Easing.out(Easing.quad),
+            useNativeDriver: true,
+          }),
+          Animated.spring(tilt, {
+            toValue: 0,
+            friction: 5,
+            tension: 120,
+            useNativeDriver: true,
+          }),
+        ]),
+      ]).start();
+    }
+
+    wasActive.current = isActive;
+  }, [isActive, spin, tilt]);
+
+  const rotate = spin.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "360deg"],
+  });
+
+  const rotateZ = tilt.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "-12deg"],
+  });
+
+  return (
+    <AnimatedPressable
+      onPress={() => router.replace(tab.path as never)}
+      style={styles.itemWrap}
+    >
+      <View style={styles.item}>
+        <Animated.View style={{ transform: [{ rotate }, { rotateZ }] }}>
+          <Ionicons
+            name={isActive ? tab.activeIcon : tab.icon}
+            size={25}
+            color={isActive ? colors.primaryEnd : colors.subtleText}
+          />
+        </Animated.View>
+        {isActive ? <View style={styles.activeUnderline} /> : null}
+      </View>
+    </AnimatedPressable>
   );
 }
 
@@ -88,17 +147,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 21,
     paddingVertical: 0,
-    overflow: "hidden",
     alignSelf: "center",
   },
-  itemActive: {
-    backgroundColor: colors.activeTab,
-  },
-  activeGlow: {
+  activeUnderline: {
     position: "absolute",
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: "rgba(242,154,74,0.12)",
+    bottom: 1,
+    width: 18,
+    height: 3,
+    borderRadius: 999,
+    backgroundColor: colors.primaryEnd,
   },
 });

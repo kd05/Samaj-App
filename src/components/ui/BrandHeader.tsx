@@ -1,7 +1,7 @@
 import { colors } from "@/src/theme/colors";
-import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { BrandMark } from "./BrandMark";
 
 type BrandHeaderProps = {
   badgeLabel?: string;
@@ -17,25 +17,35 @@ export function BrandHeader({
   return (
     <View style={styles.row}>
       <View style={styles.brandWrap}>
-        <View style={styles.logoCircle}>
-          <Ionicons name="flower-outline" size={18} color={colors.primarySolid} />
-        </View>
+        <BrandMark />
         <View>
           <Text style={styles.title}>48 Kadva Patidar</Text>
-          {badgeLabel ? <Text style={styles.badge}>{badgeLabel}</Text> : null}
         </View>
       </View>
 
-      <Pressable
-        onPress={onRightPress}
-        disabled={!onRightPress}
-        style={({ pressed }) => [
-          styles.avatar,
-          pressed && onRightPress ? styles.avatarPressed : null,
-        ]}
-      >
-        <Text style={styles.avatarText}>{rightLabel}</Text>
-      </Pressable>
+      {badgeLabel ? (
+        <Pressable
+          onPress={onRightPress}
+          disabled={!onRightPress}
+          style={({ pressed }) => [
+            styles.pagePill,
+            pressed && onRightPress ? styles.pagePillPressed : null,
+          ]}
+        >
+          <Text style={styles.pagePillText}>{badgeLabel}</Text>
+        </Pressable>
+      ) : (
+        <Pressable
+          onPress={onRightPress}
+          disabled={!onRightPress}
+          style={({ pressed }) => [
+            styles.avatar,
+            pressed && onRightPress ? styles.avatarPressed : null,
+          ]}
+        >
+          <Text style={styles.avatarText}>{rightLabel}</Text>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -54,28 +64,30 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 12,
   },
-  logoCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  title: {
+    color: colors.title,
+    fontSize: 18,
+    fontWeight: "800",
+    marginLeft: 12,
+  },
+  pagePill: {
+    minHeight: 36,
+    borderRadius: 18,
+    paddingHorizontal: 14,
     backgroundColor: colors.softPeach,
     borderWidth: 1,
     borderColor: colors.softPeachBorder,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 12,
   },
-  title: {
-    color: colors.title,
-    fontSize: 18,
-    fontWeight: "800",
+  pagePillPressed: {
+    opacity: 0.86,
   },
-  badge: {
-    marginTop: 2,
-    color: colors.link,
+  pagePillText: {
+    color: colors.primaryEnd,
     fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 1,
+    fontWeight: "800",
+    letterSpacing: 1.1,
     textTransform: "uppercase",
   },
   avatar: {

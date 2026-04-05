@@ -92,7 +92,7 @@ export default function HomeScreen() {
               <View
                 style={[
                   styles.featureTileGlow,
-                  { backgroundColor: `${card.accent}18` },
+                  { backgroundColor: `${card.accent}14` },
                 ]}
               />
               <View
@@ -107,32 +107,18 @@ export default function HomeScreen() {
               <Text style={styles.featureTileTitle}>{card.title}</Text>
               <Text style={styles.featureTileSubtitle}>{card.subtitle}</Text>
               <View style={styles.featureTileFooter}>
-                <View style={styles.featureTileActionCopy}>
-                  <View
-                    style={[
-                      styles.featureTileActionLine,
-                      { backgroundColor: `${card.accent}88` },
-                    ]}
-                  />
-                  <Text style={[styles.featureTileActionText, { color: card.accent }]}>
-                    Enter Section
-                  </Text>
-                </View>
                 <View
                   style={[
-                    styles.featureTileArrow,
+                    styles.featureTileActionButton,
                     {
                       backgroundColor: `${card.accent}14`,
-                      borderColor: `${card.accent}38`,
+                      borderColor: `${card.accent}30`,
                     },
                   ]}
                 >
-                  <Ionicons
-                    name="arrow-up"
-                    size={18}
-                    color={card.accent}
-                    style={styles.featureTileArrowIcon}
-                  />
+                  <Text style={[styles.featureTileActionText, { color: card.accent }]}>
+                    Explore
+                  </Text>
                 </View>
               </View>
             </AnimatedPressable>
@@ -204,16 +190,16 @@ const styles = StyleSheet.create({
     padding: 22,
     borderWidth: 1,
     borderColor: colors.border,
-    marginBottom: 16,
+    marginBottom: 22,
     overflow: "hidden",
     ...shadows.lifted,
   },
   featureTileGlow: {
     position: "absolute",
-    right: -24,
-    top: -24,
-    width: 140,
-    height: 140,
+    right: -54,
+    top: -54,
+    width: 210,
+    height: 210,
     borderRadius: 999,
   },
   featureTileIcon: {
@@ -247,36 +233,20 @@ const styles = StyleSheet.create({
   },
   featureTileFooter: {
     marginTop: 22,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    alignItems: "flex-start",
   },
-  featureTileActionCopy: {
-    flexDirection: "row",
+  featureTileActionButton: {
+    minHeight: 42,
+    borderRadius: 21,
+    borderWidth: 1,
+    paddingHorizontal: 18,
     alignItems: "center",
-  },
-  featureTileActionLine: {
-    width: 18,
-    height: 2,
-    borderRadius: 999,
-    marginRight: 10,
+    justifyContent: "center",
   },
   featureTileActionText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "800",
     letterSpacing: 1.1,
     textTransform: "uppercase",
-  },
-  featureTileArrow: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    ...shadows.soft,
-  },
-  featureTileArrowIcon: {
-    transform: [{ rotate: "45deg" }],
   },
 });

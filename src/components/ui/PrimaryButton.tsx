@@ -8,22 +8,28 @@ type PrimaryButtonProps = {
   label: string;
   onPress?: () => void;
   style?: ViewStyle;
+  disabled?: boolean;
 };
 
 export function PrimaryButton({
   label,
   onPress,
   style,
+  disabled = false,
 }: PrimaryButtonProps) {
   return (
-    <AnimatedPressable onPress={onPress} style={style}>
+    <AnimatedPressable onPress={onPress} style={style} disabled={disabled}>
       <LinearGradient
-        colors={[colors.primaryStart, colors.primaryEnd]}
+        colors={
+          disabled
+            ? [colors.softPeachBorder, colors.border]
+            : [colors.primaryStart, colors.primaryEnd]
+        }
         start={{ x: 0, y: 0.5 }}
         end={{ x: 1, y: 0.5 }}
-        style={styles.button}
+        style={[styles.button, disabled ? styles.buttonDisabled : null]}
       >
-        <Text style={styles.label}>{label}</Text>
+        <Text style={[styles.label, disabled ? styles.labelDisabled : null]}>{label}</Text>
       </LinearGradient>
     </AnimatedPressable>
   );
@@ -37,9 +43,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 20,
   },
+  buttonDisabled: {
+    opacity: 0.7,
+  },
   label: {
     color: colors.white,
     fontSize: 16,
     fontWeight: "800",
+  },
+  labelDisabled: {
+    color: colors.muted,
   },
 });
