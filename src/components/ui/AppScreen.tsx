@@ -8,17 +8,13 @@ import {
   type ScrollViewProps,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { FloatingTabBar } from "./FloatingTabBar";
-
 type AppScreenProps = ScrollViewProps & {
   children: React.ReactNode;
-  withTabBar?: boolean;
 };
 
 export function AppScreen({
   children,
   contentContainerStyle,
-  withTabBar = true,
   ...props
 }: AppScreenProps) {
   const opacity = useRef(new Animated.Value(0)).current;
@@ -50,7 +46,6 @@ export function AppScreen({
           <View style={styles.inner}>{children}</View>
         </ScrollView>
       </Animated.View>
-      {withTabBar ? <FloatingTabBar /> : null}
     </SafeAreaView>
   );
 }

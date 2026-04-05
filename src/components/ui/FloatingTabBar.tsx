@@ -1,25 +1,12 @@
+import { TAB_ITEMS } from "@/src/config/navigation";
 import { colors } from "@/src/theme/colors";
 import { shadows } from "@/src/theme/shadows";
 import { Ionicons } from "@expo/vector-icons";
 import { router, usePathname } from "expo-router";
-import React, { useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import { Animated, Easing, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AnimatedPressable } from "./AnimatedPressable";
-
-type TabIconName = React.ComponentProps<typeof Ionicons>["name"];
-
-const tabs: {
-  label: string;
-  icon: TabIconName;
-  activeIcon: TabIconName;
-  path: "/home" | "/events" | "/members" | "/profile";
-}[] = [
-  { label: "Home", icon: "home-outline", activeIcon: "home", path: "/home" },
-  { label: "Events", icon: "calendar-outline", activeIcon: "calendar", path: "/events" },
-  { label: "Members", icon: "people-outline", activeIcon: "people", path: "/members" },
-  { label: "Profile", icon: "person-outline", activeIcon: "person", path: "/profile" },
-];
 
 export function FloatingTabBar() {
   const pathname = usePathname();
@@ -30,7 +17,7 @@ export function FloatingTabBar() {
       style={[styles.outer, { bottom: Math.max(insets.bottom, 10) + 8, pointerEvents: "box-none" }]}
     >
       <View style={styles.bar}>
-        {tabs.map((tab) => {
+        {TAB_ITEMS.map((tab) => {
           const isActive = pathname === tab.path;
 
           return (
@@ -46,62 +33,80 @@ function TabBarItem({
   tab,
   isActive,
 }: {
-  tab: (typeof tabs)[number];
+  tab: (typeof TAB_ITEMS)[number];
   isActive: boolean;
 }) {
-  const spin = useRef(new Animated.Value(0)).current;
+  const bounce = useRef(new Animated.Value(0)).current;
   const tilt = useRef(new Animated.Value(0)).current;
   const wasActive = useRef(isActive);
 
-  useEffect(() => {
-    if (isActive && !wasActive.current) {
-      spin.setValue(0);
-      tilt.setValue(0);
+  const playIconAnimation = useCallback(() => {
+    bounce.setValue(0);
+    tilt.setValue(0);
 
-      Animated.parallel([
-        Animated.timing(spin, {
+    Animated.parallel([
+      Animated.sequence([
+        Animated.timing(bounce, {
           toValue: 1,
-          duration: 420,
-          easing: Easing.out(Easing.cubic),
+          duration: 120,
+          easing: Easing.out(Easing.quad),
           useNativeDriver: true,
         }),
-        Animated.sequence([
-          Animated.timing(tilt, {
-            toValue: 1,
-            duration: 140,
-            easing: Easing.out(Easing.quad),
-            useNativeDriver: true,
-          }),
-          Animated.spring(tilt, {
-            toValue: 0,
-            friction: 5,
-            tension: 120,
-            useNativeDriver: true,
-          }),
-        ]),
-      ]).start();
+        Animated.spring(bounce, {
+          toValue: 0,
+          friction: 4,
+          tension: 150,
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.sequence([
+        Animated.timing(tilt, {
+          toValue: 1,
+          duration: 100,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.spring(tilt, {
+          toValue: 0,
+          friction: 5,
+          tension: 140,
+          useNativeDriver: true,
+        }),
+      ]),
+    ]).start();
+  }, [bounce, tilt]);
+
+  useEffect(() => {
+    if (isActive && !wasActive.current) {
+      playIconAnimation();
     }
 
     wasActive.current = isActive;
-  }, [isActive, spin, tilt]);
+  }, [isActive, playIconAnimation]);
 
-  const rotate = spin.interpolate({
+  const translateY = bounce.interpolate({
     inputRange: [0, 1],
-    outputRange: ["0deg", "360deg"],
+    outputRange: [0, -6],
+  });
+
+  const scale = bounce.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 1.12],
   });
 
   const rotateZ = tilt.interpolate({
     inputRange: [0, 1],
-    outputRange: ["0deg", "-12deg"],
+    outputRange: ["0deg", "-10deg"],
   });
 
   return (
     <AnimatedPressable
-      onPress={() => router.replace(tab.path as never)}
+      onPress={() => router.navigate(tab.path as never)}
+      onPressIn={playIconAnimation}
       style={styles.itemWrap}
     >
       <View style={styles.item}>
-        <Animated.View style={{ transform: [{ rotate }, { rotateZ }] }}>
+        <Animated.View style={{ transform: [{ translateY }, { scale }, { rotateZ }] }}>
           <Ionicons
             name={isActive ? tab.activeIcon : tab.icon}
             size={25}

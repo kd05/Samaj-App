@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { API_ROUTES } from "@/src/config/api";
+import { loginRequest } from "@/src/services/auth";
 import { useAuth } from "@/src/screens/context/AuthContext";
 import { colors } from "@/src/theme/colors";
 import { shadows } from "@/src/theme/shadows";
@@ -75,18 +75,7 @@ export default function LoginScreen() {
       setIsSubmitting(true);
       setErrorMessage("");
 
-      const response = await fetch(API_ROUTES.login, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          login,
-          password: userPassword,
-        }),
-      });
-
-      const data = await response.json();
+      const { response, data } = await loginRequest(login, userPassword);
 
       if (!response.ok || !data?.success) {
         setErrorMessage(data?.message || "Login failed.");

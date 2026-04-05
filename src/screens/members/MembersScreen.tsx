@@ -5,15 +5,15 @@ import { PrimaryButton } from "@/src/components/ui/PrimaryButton";
 import { RevealView } from "@/src/components/ui/RevealView";
 import { SearchInput } from "@/src/components/ui/SearchInput";
 import { SectionTitle } from "@/src/components/ui/SectionTitle";
-import { API_ROUTES } from "@/src/config/api";
+import { StatePanel } from "@/src/components/ui/StatePanel";
 import { villages as fallbackVillages } from "@/src/data/content";
+import { fetchMembers, fetchVillages, type MemberListItem } from "@/src/services/members";
 import { colors } from "@/src/theme/colors";
 import { shadows } from "@/src/theme/shadows";
-import { getNumberField, getObjectField, getStringField, type ApiRecord } from "@/src/utils/apiFields";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 export default function MembersScreen() {
   const params = useLocalSearchParams<{ query?: string }>();
@@ -41,34 +41,13 @@ export default function MembersScreen() {
     const loadVillages = async () => {
       try {
         setVillagesError("");
-
-        const response = await fetch(API_ROUTES.villages, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-
-        const data = await response.json();
-        const villagesPayload = Array.isArray(data?.data?.villages)
-          ? data.data.villages
-          : Array.isArray(data?.villages)
-            ? data.villages
-            : [];
-
-        const villageOptions = villagesPayload
-          .map((item) => getStringField(item as ApiRecord, ["title", "name"]))
-          .filter(Boolean);
-
-        if (!response.ok || villageOptions.length === 0) {
-          throw new Error(data?.message || "Unable to fetch villages.");
-        }
+        const villages = await fetchVillages();
 
         if (!isMounted) {
           return;
         }
 
-        setAvailableVillages(villageOptions);
+        setAvailableVillages(villages);
       } catch (error) {
         console.log("Villages API error:", error);
 
@@ -116,29 +95,7 @@ export default function MembersScreen() {
       setAppliedVillage(selectedVillage);
       setShowVillages(false);
 
-      const response = await fetch(API_ROUTES.members, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      const data = await response.json();
-      const membersPayload = Array.isArray(data?.data?.members)
-        ? data.data.members
-        : Array.isArray(data?.members)
-          ? data.members
-          : [];
-
-      const mappedMembers = membersPayload
-        .map((item) => mapApiMember(item))
-        .filter((member): member is MemberListItem => member !== null);
-
-      if (!response.ok) {
-        throw new Error(data?.message || "Unable to fetch members.");
-      }
-
-      setMemberList(mappedMembers);
+      setMemberList(await fetchMembers());
     } catch (error) {
       console.log("Members API error:", error);
       setMemberList([]);
@@ -253,23 +210,17 @@ export default function MembersScreen() {
       </RevealView>
 
       {!hasSearched ? (
-        <View style={styles.emptyState}>
-          <View style={styles.emptyIcon}>
-            <Ionicons name="people-outline" size={26} color={colors.muted} />
-          </View>
-          <Text style={styles.emptyTitle}>Search for members</Text>
-          <Text style={styles.emptySubtitle}>
-            Enter a name or choose a village, then press search to view results.
-          </Text>
-        </View>
+        <StatePanel
+          icon="people-outline"
+          title="Search for members"
+          subtitle="Enter a name or choose a village, then press search to view results."
+        />
       ) : isSearching ? (
-        <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={colors.primaryEnd} />
-          <Text style={styles.loadingTitle}>Searching members</Text>
-          <Text style={styles.loadingSubtitle}>
-            We are fetching the latest results for your search.
-          </Text>
-        </View>
+        <StatePanel
+          loading
+          title="Searching members"
+          subtitle="We are fetching the latest results for your search."
+        />
       ) : (
         <>
           <Text style={styles.resultsCount}>
@@ -277,13 +228,11 @@ export default function MembersScreen() {
           </Text>
 
           {filteredMembers.length === 0 ? (
-            <View style={styles.emptyState}>
-              <View style={styles.emptyIcon}>
-                <Ionicons name="people-outline" size={26} color={colors.muted} />
-              </View>
-              <Text style={styles.emptyTitle}>No members found</Text>
-              <Text style={styles.emptySubtitle}>Try adjusting your search filters.</Text>
-            </View>
+            <StatePanel
+              icon="people-outline"
+              title="No members found"
+              subtitle="Try adjusting your search filters."
+            />
           ) : null}
 
           {filteredMembers.map((member) => (
@@ -323,73 +272,6 @@ export default function MembersScreen() {
       )}
     </AppScreen>
   );
-}
-
-type ApiMember = ApiRecord;
-type MemberListItem = {
-  id: string;
-  fullName: string;
-  age: string;
-  dateOfBirth: string;
-  currentCity: string;
-  gender: string;
-  province: string;
-  locationLabel: string;
-  village: string;
-  occupation: string;
-  canadaStatus?: string;
-};
-
-function mapApiMember(item: ApiMember): MemberListItem | null {
-  const acf = getObjectField(item, "acf");
-  const id = getStringField(item, ["id", "ID", "member_id"]);
-  const firstName = getStringField(item, ["first_name", "firstName", "fname"]);
-  const lastName = getStringField(item, ["last_name", "lastName", "lname"]);
-  const fullName =
-    getStringField(item, ["full_name", "fullName", "name", "title"]) ||
-    [firstName, lastName].filter(Boolean).join(" ").trim();
-  const village =
-    getStringField(acf, ["village"]) ||
-    getStringField(item, ["village", "village_name", "villageName"]);
-  const city =
-    getStringField(acf, ["city"]) ||
-    getStringField(item, ["current_city", "currentCity", "city", "location"]) ||
-    "N/A";
-  const province = getStringField(acf, ["province"]) || getStringField(item, ["province"]) || "N/A";
-  const gender = getStringField(acf, ["gender"]) || getStringField(item, ["gender"]) || "N/A";
-  const age = getNumberField(item, ["age"]);
-
-  if (!id || !fullName || !village) {
-    return null;
-  }
-
-  return {
-    id,
-    fullName,
-    age,
-    dateOfBirth:
-      getStringField(acf, ["date_of_birth"]) ||
-      getStringField(item, ["date_of_birth", "dateOfBirth", "dob", "birth_date"]) ||
-      "N/A",
-    currentCity: city,
-    gender,
-    province,
-    locationLabel: `${city}, ${province}`,
-    village,
-    occupation:
-      getStringField(acf, ["designation"]) ||
-      getStringField(item, ["occupation", "profession", "job_title", "jobTitle"]) ||
-      "N/A",
-    canadaStatus:
-      getStringField(acf, ["current_status_in_canada"]) ||
-      getStringField(item, [
-        "canada_status",
-        "canadaStatus",
-        "status_in_canada",
-        "statusInCanada",
-      ]) ||
-      undefined,
-  };
 }
 
 type InfoLineProps = {
@@ -500,50 +382,6 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     marginBottom: 14,
     marginLeft: 4,
-  },
-  emptyState: {
-    alignItems: "center",
-    paddingVertical: 38,
-  },
-  emptyIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: colors.softPeach,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 12,
-  },
-  emptyTitle: {
-    color: colors.title,
-    fontSize: 20,
-    fontWeight: "800",
-  },
-  loadingWrap: {
-    alignItems: "center",
-    paddingHorizontal: 24,
-    paddingVertical: 28,
-    marginBottom: 18,
-  },
-  loadingTitle: {
-    color: colors.title,
-    fontSize: 20,
-    fontWeight: "800",
-    marginTop: 16,
-  },
-  loadingSubtitle: {
-    color: colors.subtleText,
-    fontSize: 14,
-    lineHeight: 21,
-    textAlign: "center",
-    marginTop: 6,
-    maxWidth: 240,
-  },
-  emptySubtitle: {
-    color: colors.subtleText,
-    fontSize: 14,
-    marginTop: 4,
-    textAlign: "center",
   },
   memberCard: {
     backgroundColor: colors.card,
