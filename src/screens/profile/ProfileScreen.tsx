@@ -1,12 +1,15 @@
 import { AppScreen } from "@/src/components/ui/AppScreen";
 import { BrandHeader } from "@/src/components/ui/BrandHeader";
 import { PrimaryButton } from "@/src/components/ui/PrimaryButton";
+import { useAuth } from "@/src/screens/context/AuthContext";
 import { colors } from "@/src/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 export default function ProfileScreen() {
+  const { setLoggedIn } = useAuth();
+
   return (
     <AppScreen>
       <BrandHeader badgeLabel="Profile" />
@@ -18,7 +21,7 @@ export default function ProfileScreen() {
         <Text style={styles.text}>
           This tab is ready for the future WordPress-powered member account area.
         </Text>
-        <PrimaryButton label="Coming Soon" />
+        <PrimaryButton label="Log Out" onPress={() => setLoggedIn(false)} />
       </View>
     </AppScreen>
   );

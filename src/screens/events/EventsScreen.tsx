@@ -1,32 +1,21 @@
 import { AppScreen } from "@/src/components/ui/AppScreen";
 import { AnimatedPressable } from "@/src/components/ui/AnimatedPressable";
 import { BrandHeader } from "@/src/components/ui/BrandHeader";
+import { FeatureSlider, FeatureSliderControls } from "@/src/components/ui/FeatureSlider";
 import { Pill } from "@/src/components/ui/Pill";
 import { PrimaryButton } from "@/src/components/ui/PrimaryButton";
 import { RevealView } from "@/src/components/ui/RevealView";
 import { SectionTitle } from "@/src/components/ui/SectionTitle";
 import { featuredEvent, pastEvents, upcomingEvents } from "@/src/data/content";
 import { colors } from "@/src/theme/colors";
+import { shadows } from "@/src/theme/shadows";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { router } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
-import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
+import React from "react";
+import { StyleSheet, Text, View } from "react-native";
 
 export default function EventsScreen() {
-  const [upcomingIndex, setUpcomingIndex] = useState(0);
-  const cardOpacity = useRef(new Animated.Value(1)).current;
-  const event = upcomingEvents[upcomingIndex];
-
-  useEffect(() => {
-    cardOpacity.setValue(0.2);
-    Animated.timing(cardOpacity, {
-      toValue: 1,
-      duration: 320,
-      useNativeDriver: true,
-    }).start();
-  }, [cardOpacity, upcomingIndex]);
-
   return (
     <AppScreen>
       <RevealView>
@@ -34,7 +23,9 @@ export default function EventsScreen() {
       </RevealView>
 
       <RevealView delay={60} style={styles.section}>
-        <SectionTitle label="Featured Events" subtitle="Community Hub" />
+        <Text style={styles.sectionEyebrow}>Community Hub</Text>
+        <Text style={styles.sectionTitle}>Featured Events</Text>
+        <View style={styles.sectionAccent} />
         <View style={styles.featuredCard}>
           <Image
             source={{ uri: featuredEvent.image }}
@@ -70,25 +61,19 @@ export default function EventsScreen() {
       </RevealView>
 
       <RevealView delay={130} style={styles.section}>
-        <View style={styles.headerRow}>
-          <SectionTitle label="Upcoming Events" subtitle="Discover More" />
-          <View style={styles.controls}>
-            <RoundIconButton
-              icon="chevron-back"
-              onPress={() =>
-                setUpcomingIndex(
-                  (prev) => (prev - 1 + upcomingEvents.length) % upcomingEvents.length
-                )
-              }
-            />
-            <RoundIconButton
-              icon="chevron-forward"
-              onPress={() => setUpcomingIndex((prev) => (prev + 1) % upcomingEvents.length)}
-            />
-          </View>
-        </View>
-
-        <AnimatedPressable
+        <FeatureSlider
+          items={upcomingEvents}
+          itemKey={(item) => item.id}
+          imageUri={(item) => item.image}
+          renderControls={({ goNext, goPrev }) => (
+            <View style={styles.headerRow}>
+              <SectionTitle label="Upcoming Events" subtitle="Discover More" />
+              <FeatureSliderControls goPrev={goPrev} goNext={goNext} />
+            </View>
+          )}
+          cardHeight={320}
+          imageOpacity={0.62}
+          showControls={false}
           onPress={() =>
             router.push({
               pathname: "/events/[id]",
@@ -96,16 +81,8 @@ export default function EventsScreen() {
             })
           }
           style={styles.heroCard}
-        >
-          <Animated.View
-            style={[
-              styles.heroAnimatedLayer,
-              { opacity: cardOpacity },
-            ]}
-          >
-            <Image source={{ uri: event.image }} style={styles.heroImage} contentFit="cover" />
-            <View style={styles.heroOverlay} />
-            <View style={styles.heroContent}>
+          renderContent={(event) => (
+            <>
               <View style={styles.heroPills}>
                 <View style={styles.heroPillWrap}>
                   <Pill label={event.tag} inverse />
@@ -120,24 +97,14 @@ export default function EventsScreen() {
               <View style={styles.detailsButton}>
                 <Text style={styles.detailsButtonText}>View Details</Text>
               </View>
-            </View>
-          </Animated.View>
-          <View style={styles.indicatorRow}>
-            {upcomingEvents.map((item, index) => (
-              <View
-                key={item.id}
-                style={[
-                  styles.indicator,
-                  index === upcomingIndex ? styles.indicatorActive : null,
-                ]}
-              />
-            ))}
-          </View>
-        </AnimatedPressable>
+            </>
+          )}
+        />
       </RevealView>
 
       <RevealView delay={200} style={styles.section}>
-        <SectionTitle label="Past Events" />
+        <Text style={styles.sectionTitle}>Past Events</Text>
+        <View style={styles.sectionAccent} />
         <View>
           {pastEvents.map((item) => (
             <AnimatedPressable key={item.id} style={styles.pastCard}>
@@ -159,22 +126,31 @@ export default function EventsScreen() {
   );
 }
 
-type RoundIconButtonProps = {
-  icon: "chevron-back" | "chevron-forward";
-  onPress: () => void;
-};
-
-function RoundIconButton({ icon, onPress }: RoundIconButtonProps) {
-  return (
-    <Pressable onPress={onPress} style={styles.roundButton}>
-      <Ionicons name={icon} size={18} color={colors.title} />
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   section: {
-    marginBottom: 30,
+    marginBottom: 38,
+  },
+  sectionEyebrow: {
+    color: colors.muted,
+    fontSize: 11,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    letterSpacing: 1.4,
+    marginBottom: 8,
+  },
+  sectionTitle: {
+    color: colors.title,
+    fontSize: 24,
+    fontWeight: "800",
+    lineHeight: 30,
+  },
+  sectionAccent: {
+    width: 52,
+    height: 3,
+    borderRadius: 999,
+    backgroundColor: colors.primaryEnd,
+    marginTop: 12,
+    marginBottom: 14,
   },
   featuredCard: {
     backgroundColor: colors.card,
@@ -182,6 +158,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     borderWidth: 1,
     borderColor: colors.border,
+    ...shadows.lifted,
   },
   featuredImage: {
     width: "100%",
@@ -220,44 +197,10 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-end",
   },
-  controls: {
-    flexDirection: "row",
-    marginBottom: 18,
-  },
-  roundButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.softPeach,
-    alignItems: "center",
-    justifyContent: "center",
-    marginLeft: 8,
-  },
   heroCard: {
-    borderRadius: 32,
-    overflow: "hidden",
-    backgroundColor: colors.card,
     height: 320,
-    shadowColor: "#000",
-    shadowOpacity: 0.24,
-    shadowRadius: 22,
-    shadowOffset: { width: 0, height: 14 },
-    elevation: 9,
-  },
-  heroAnimatedLayer: {
-    height: 320,
-  },
-  heroImage: {
-    width: "100%",
-    height: 320,
-    opacity: 0.62,
-  },
-  heroOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: colors.overlay,
   },
   heroContent: {
-    position: "absolute",
     left: 20,
     right: 20,
     bottom: 22,
@@ -301,23 +244,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "800",
   },
-  indicatorRow: {
-    position: "absolute",
-    right: 22,
-    bottom: 18,
-    flexDirection: "row",
-  },
-  indicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.35)",
-    marginLeft: 6,
-  },
-  indicatorActive: {
-    width: 24,
-    backgroundColor: colors.white,
-  },
   pastCard: {
     width: "100%",
     backgroundColor: colors.surface,
@@ -326,6 +252,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderRadius: 30,
     overflow: "hidden",
+    ...shadows.lifted,
   },
   pastImage: {
     width: "100%",

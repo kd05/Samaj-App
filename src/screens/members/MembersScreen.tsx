@@ -7,6 +7,7 @@ import { SearchInput } from "@/src/components/ui/SearchInput";
 import { SectionTitle } from "@/src/components/ui/SectionTitle";
 import { members, villages } from "@/src/data/content";
 import { colors } from "@/src/theme/colors";
+import { shadows } from "@/src/theme/shadows";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
@@ -185,6 +186,7 @@ const styles = StyleSheet.create({
     borderRadius: 32,
     padding: 20,
     marginBottom: 18,
+    ...shadows.lifted,
   },
   searchSubtitle: {
     color: colors.subtleText,
@@ -282,6 +284,7 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     padding: 18,
     marginBottom: 14,
+    ...shadows.soft,
   },
   memberTopRow: {
     flexDirection: "row",

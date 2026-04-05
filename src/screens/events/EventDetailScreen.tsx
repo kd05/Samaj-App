@@ -4,6 +4,7 @@ import { PrimaryButton } from "@/src/components/ui/PrimaryButton";
 import { RevealView } from "@/src/components/ui/RevealView";
 import { type EventHighlight, getEventDetailById } from "@/src/data/content";
 import { colors } from "@/src/theme/colors";
+import { shadows } from "@/src/theme/shadows";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
@@ -79,16 +80,16 @@ export default function EventDetailScreen() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.heroWrap}>
           <Image source={{ uri: event.image }} style={styles.heroImage} contentFit="cover" />
-          <View style={styles.heroOverlayTop} />
           <LinearGradient
             colors={[
               "rgba(23,18,15,0)",
-              "rgba(23,18,15,0.04)",
-              "rgba(23,18,15,0.18)",
-              "rgba(23,18,15,0.45)",
+              "rgba(23,18,15,0.08)",
+              "rgba(23,18,15,0.36)",
+              "rgba(23,18,15,0.72)",
               colors.background,
             ]}
-            locations={[0, 0.3, 0.72, 1]}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
             style={styles.heroGradient}
           />
 
@@ -248,16 +249,12 @@ const styles = StyleSheet.create({
     width: "100%",
     height: 380,
   },
-  heroOverlayTop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.04)",
-  },
   heroGradient: {
     position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
-    height: 260,
+    top: "46%",
   },
   heroHeader: {
     position: "absolute",
@@ -305,6 +302,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     padding: 16,
     marginBottom: 12,
+    ...shadows.soft,
   },
   infoIcon: {
     width: 46,
@@ -369,6 +367,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     padding: 16,
     marginBottom: 12,
+    ...shadows.soft,
   },
   accordionCardOpen: {
     backgroundColor: colors.softPeach,
